@@ -2,7 +2,10 @@
 Madrid Smart Mobility — Interactive map extension
 Adds a Leaflet map with:
 - heatmap toggle (trips vs collisions)
-- route example: Puerta del Sol → Plaza Mayor (polyline + summary)
+- multiple example routes:
+  - Puerta del Sol → Plaza Mayor (direct)
+  - Puerta del Sol → Plaza Mayor (via Malasaña)
+  - Puerta del Sol → Atocha (direct)
 - safety scoring per station and safe-spot highlighting
 
 Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStreetMap tiles and leaflet-heat plugin.
@@ -213,10 +216,10 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
   <div class="wrap">
     <section id="home">
       <header>
-        <img src="./WhatsApp Image 2025-11-16 at 21.48.28.jpeg" width="56" style="border-radius:8px" alt="Madrid">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Madrid_municipal_logo.svg/600px-Madrid_municipal_logo.svg.png" width="56" style="border-radius:8px" alt="Madrid">
         <div>
           <h1>Madrid Smart Mobility</h1>
-          <div class="sub">Interactive map: heat filters, example route, and safe-spot identification</div>
+          <div class="sub">Interactive map: heat filters, example routes, and safe-spot identification</div>
         </div>
       </header>
     </section>
@@ -231,7 +234,12 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
             <button class="btn" id="heatTripsBtn">Show heat: trip density</button>
             <button class="btn secondary" id="heatCollBtn">Show heat: collisions</button>
             <button class="btn secondary" id="clearHeatBtn">Clear heat</button>
-            <button class="btn" id="routeBtn">Show example route: Sol → Plaza Mayor</button>
+
+            <!-- New multiple route buttons -->
+            <button class="btn" id="routeSolPlazaDirectBtn">Route: Sol → Plaza Mayor (direct)</button>
+            <button class="btn secondary" id="routeSolPlazaScenicBtn">Route: Sol → Plaza Mayor (via Malasaña)</button>
+            <button class="btn secondary" id="routeSolAtochaBtn">Route: Sol → Atocha (direct)</button>
+
             <button class="btn secondary" id="safeSpotsBtn">Highlight safe spots</button>
           </div>
 
@@ -295,7 +303,7 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
       const marker = L.circleMarker([s.lat, s.lon], {
         radius: 8, fillOpacity: 0.9, color: '#fff', weight:1, fillColor: safetyColor(score)
       }).addTo(stationLayer);
-      marker.bindPopup(`<strong>${s.name} (${s.id})</strong><br/>Bikes: ${s.bikes}/${s.cap}<br/>Trips: ${s.trips}<br/>Collisions: ${s.collisions}<br/>Safety: ${ (score).toFixed(2) }`);
+      marker.bindPopup(`<strong>${s.name} (${s.id})</strong><br/>Bikes: ${s.bikes}/${s.cap}<br/>Trips: ${s.trips}<br/>Collisions: ${s.collisions}<br/>Safety: ${(score).toFixed(2)}`);
       marker.on('click', ()=>{
         marker.openPopup();
       });
@@ -306,7 +314,11 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
     stations.forEach(s => {
       const el = document.createElement('div'); el.className='station-item';
       const score = safetyScore(s);
-      el.innerHTML = `<strong>${s.id} — ${s.name}</strong><div style="margin-top:6px;color:var(--muted)">Bikes: ${s.bikes}/${s.cap} &nbsp;·&nbsp; Trips: ${s.trips} &nbsp;·&nbsp; Collisions: ${s.collisions}</div><div style="margin-top:8px;color:${safetyColor(score)}">Safety score: ${score.toFixed(2)}</div>`;
+      el.innerHTML = `<strong>${s.id} — ${s.name}</strong>
+        <div style="margin-top:6px;color:var(--muted)">
+          Bikes: ${s.bikes}/${s.cap} &nbsp;·&nbsp; Trips: ${s.trips} &nbsp;·&nbsp; Collisions: ${s.collisions}
+        </div>
+        <div style="margin-top:8px;color:${safetyColor(score)}">Safety score: ${score.toFixed(2)}</div>`;
       el.addEventListener('click', ()=>{ map.flyTo([s.lat,s.lon],15); });
       list.appendChild(el);
     });
@@ -326,53 +338,118 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
       heatLayer = L.heatLayer(collHeatPoints, {radius: 50, blur:30, maxZoom: 17}).addTo(map);
       document.getElementById('legend').textContent = 'Heat: collisions (darker = more collisions)';
     });
-    document.getElementById('clearHeatBtn').addEventListener('click', ()=>{ if(heatLayer) map.removeLayer(heatLayer); heatLayer=null; document.getElementById('legend').textContent='Tip: toggle heatmap to inspect hotspots. Click station markers for details.'});
+    document.getElementById('clearHeatBtn').addEventListener('click', ()=>{
+      if(heatLayer) map.removeLayer(heatLayer);
+      heatLayer=null;
+      document.getElementById('legend').textContent='Tip: toggle heatmap to inspect hotspots. Click station markers for details.';
+    });
 
-    // Example route: Puerta del Sol -> Plaza Mayor
-    const sol = stations.find(s=>s.id==='1001');
-    const plaza = stations.find(s=>s.id==='1012');
-    function showRoute(){
-      routeLayer.clearLayers();
-      if(!sol || !plaza) return alert('Example stations not found');
-      // Simple straight polyline; for production use a routing API if available
-      const poly = L.polyline([[sol.lat,sol.lon],[plaza.lat,plaza.lon]],{color:'#0b84ff',weight:4,opacity:0.9}).addTo(routeLayer);
-      // markers with popups
-      L.marker([sol.lat,sol.lon]).addTo(routeLayer).bindPopup(`<strong>${sol.name}</strong>`).openPopup();
-      L.marker([plaza.lat,plaza.lon]).addTo(routeLayer).bindPopup(`<strong>${plaza.name}</strong>`);
-      map.fitBounds(poly.getBounds().pad(0.4));
-      // compute simple distance/time
-      const d = haversine(sol.lat,sol.lon,plaza.lat,plaza.lon); // km
-      const avgSpeedKmh = 12; // typical bike speed
-      const mins = Math.round((d/avgSpeedKmh)*60);
-      document.getElementById('legend').textContent = `Route: ${sol.name} → ${plaza.name} — approx ${d.toFixed(2)} km, ~${mins} min by bike (straight-line example)`;
-    }
-    document.getElementById('routeBtn').addEventListener('click', showRoute);
-
-    // Safe spot highlighting: markers with high safety score
-    function highlightSafeSpots(){
-      // find top 3 by safety score
-      const ranked = stations.map(s=>({s,score:safetyScore(s)})).sort((a,b)=>b.score-a.score);
-      const top = ranked.slice(0,3).map(r=>r.s);
-      // animate / open popups
-      top.forEach(t=>{
-        const m = L.circleMarker([t.lat,t.lon],{radius:14,fillColor:'#1a9850',color:'#fff',weight:2,fillOpacity:0.9}).addTo(routeLayer);
-        setTimeout(()=>{ m.bindPopup(`<strong>Safe spot: ${t.name}</strong><br/>Safety ${(safetyScore(t)).toFixed(2)}`).openPopup(); }, 200);
-        setTimeout(()=>{ map.flyTo([t.lat,t.lon],14); }, 600);
-      });
-      document.getElementById('legend').textContent = `Highlighted top ${top.length} safe spots (based on mock data)`;
-    }
-    document.getElementById('safeSpotsBtn').addEventListener('click', highlightSafeSpots);
+    // Get key stations
+    const sol    = stations.find(s=>s.id==='1001');   // Puerta del Sol
+    const plaza  = stations.find(s=>s.id==='1012');   // Plaza Mayor
+    const atocha = stations.find(s=>s.id==='2030');   // Atocha
+    const malas  = stations.find(s=>s.id==='5201');   // Malasaña
 
     // utility: haversine distance (km)
     function haversine(lat1,lon1,lat2,lon2){
       function toRad(v){return v*Math.PI/180}
-      const R=6371; const dLat=toRad(lat2-lat1); const dLon=toRad(lon2-lon1);
-      const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
-      const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return R*c;
+      const R=6371;
+      const dLat=toRad(lat2-lat1);
+      const dLon=toRad(lon2-lon1);
+      const a=Math.sin(dLat/2)*Math.sin(dLat/2)
+            +Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
+      const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      return R*c;
     }
 
+    function setRouteLegend(fromName, toName, distanceKm, avgSpeedKmh, note){
+      const mins = Math.round((distanceKm/avgSpeedKmh)*60);
+      const extra = note ? ` — ${note}` : '';
+      document.getElementById('legend').textContent =
+        `Route: ${fromName} → ${toName} — approx ${distanceKm.toFixed(2)} km, ~${mins} min by bike${extra}`;
+    }
+
+    // ROUTES
+
+    // 1) Direct Sol → Plaza Mayor
+    function showRouteSolPlazaDirect(){
+      routeLayer.clearLayers();
+      if(!sol || !plaza) return alert('Sol or Plaza Mayor not found in dataset');
+      const coords = [[sol.lat,sol.lon],[plaza.lat,plaza.lon]];
+      const poly = L.polyline(coords,{color:'#0b84ff',weight:4,opacity:0.9}).addTo(routeLayer);
+      L.marker([sol.lat,sol.lon]).addTo(routeLayer).bindPopup(`<strong>${sol.name}</strong>`).openPopup();
+      L.marker([plaza.lat,plaza.lon]).addTo(routeLayer).bindPopup(`<strong>${plaza.name}</strong>`);
+      map.fitBounds(poly.getBounds().pad(0.4));
+      const d = haversine(sol.lat,sol.lon,plaza.lat,plaza.lon);
+      setRouteLegend(sol.name, plaza.name, d, 12, '(direct example)');
+    }
+
+    // 2) Scenic Sol → Plaza Mayor via Malasaña
+    function showRouteSolPlazaScenic(){
+      routeLayer.clearLayers();
+      if(!sol || !plaza || !malas) return alert('Needed stations (Sol/Plaza/Malasaña) not found in dataset');
+      const coords = [
+        [sol.lat,sol.lon],
+        [malas.lat,malas.lon],
+        [plaza.lat,plaza.lon]
+      ];
+      const poly = L.polyline(coords,{color:'#22c55e',weight:4,opacity:0.9,dashArray:'6,4'}).addTo(routeLayer);
+      L.marker([sol.lat,sol.lon]).addTo(routeLayer).bindPopup(`<strong>${sol.name}</strong>`).openPopup();
+      L.marker([malas.lat,malas.lon]).addTo(routeLayer).bindPopup(`<strong>${malas.name} (via)</strong>`);
+      L.marker([plaza.lat,plaza.lon]).addTo(routeLayer).bindPopup(`<strong>${plaza.name}</strong>`);
+      map.fitBounds(poly.getBounds().pad(0.4));
+
+      // approximate total distance as sum of segments
+      const d1 = haversine(sol.lat,sol.lon,malas.lat,malas.lon);
+      const d2 = haversine(malas.lat,malas.lon,plaza.lat,plaza.lon);
+      const dTotal = d1 + d2;
+      setRouteLegend(sol.name, plaza.name, dTotal, 11, '(via Malasaña — scenic detour)');
+    }
+
+    // 3) Direct Sol → Atocha
+    function showRouteSolAtocha(){
+      routeLayer.clearLayers();
+      if(!sol || !atocha) return alert('Sol or Atocha not found in dataset');
+      const coords = [[sol.lat,sol.lon],[atocha.lat,atocha.lon]];
+      const poly = L.polyline(coords,{color:'#f97316',weight:4,opacity:0.9}).addTo(routeLayer);
+      L.marker([sol.lat,sol.lon]).addTo(routeLayer).bindPopup(`<strong>${sol.name}</strong>`).openPopup();
+      L.marker([atocha.lat,atocha.lon]).addTo(routeLayer).bindPopup(`<strong>${atocha.name}</strong>`);
+      map.fitBounds(poly.getBounds().pad(0.4));
+      const d = haversine(sol.lat,sol.lon,atocha.lat,atocha.lon);
+      setRouteLegend(sol.name, atocha.name, d, 14, '(direct link to major station)');
+    }
+
+    // Hook up route buttons
+    document.getElementById('routeSolPlazaDirectBtn')
+      .addEventListener('click', showRouteSolPlazaDirect);
+    document.getElementById('routeSolPlazaScenicBtn')
+      .addEventListener('click', showRouteSolPlazaScenic);
+    document.getElementById('routeSolAtochaBtn')
+      .addEventListener('click', showRouteSolAtocha);
+
+    // Safe spot highlighting: markers with high safety score
+    function highlightSafeSpots(){
+      routeLayer.clearLayers(); // clear previous routes to focus on safe spots
+      // find top 3 by safety score
+      const ranked = stations.map(s=>({s,score:safetyScore(s)})).sort((a,b)=>b.score-a.score);
+      const top = ranked.slice(0,3).map(r=>r.s);
+      top.forEach(t=>{
+        const m = L.circleMarker([t.lat,t.lon],{
+          radius:14,fillColor:'#1a9850',color:'#fff',weight:2,fillOpacity:0.9
+        }).addTo(routeLayer);
+        setTimeout(()=>{ m.bindPopup(`<strong>Safe spot: ${t.name}</strong><br/>Safety ${(safetyScore(t)).toFixed(2)}`).openPopup(); }, 200);
+        setTimeout(()=>{ map.flyTo([t.lat,t.lon],14); }, 600);
+      });
+      document.getElementById('legend').textContent =
+        `Highlighted top ${top.length} safe spots (based on mock data)`;
+    }
+    document.getElementById('safeSpotsBtn').addEventListener('click', highlightSafeSpots);
+
     // Helpful: center map on Sol by default
-    map.setView([sol.lat,sol.lon],14);
+    if (sol) {
+      map.setView([sol.lat,sol.lon],14);
+    }
+
   </script>
 
   <!-- Dark mode logic -->
