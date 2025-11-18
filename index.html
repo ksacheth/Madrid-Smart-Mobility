@@ -4,13 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Madrid Smart Mobility — Analytics Dashboard</title>
-  
-  <!-- Fonts & Libraries -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
   <style>
-    /* --- CSS VARIABLES & THEME --- */
     :root {
       --bg: #f8fafc;
       --panel: #ffffff;
@@ -18,10 +14,10 @@
       --text-muted: #64748b;
       --border: #e2e8f0;
       --primary: #3b82f6;
+      --primary-hover: #2563eb;
       --danger: #ef4444;
-      --warning: #eab308;
       --success: #22c55e;
-      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     }
 
     body.dark {
@@ -31,8 +27,11 @@
       --text-muted: #94a3b8;
       --border: #334155;
       --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
       --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
     }
+
+    * { box-sizing: border-box; transition: background-color 0.2s, color 0.2s; }
 
     body {
       font-family: 'Inter', sans-serif;
@@ -44,7 +43,7 @@
       flex-direction: column;
     }
 
-    /* --- NAVBAR --- */
+    /* Navbar */
     nav {
       background: var(--panel);
       border-bottom: 1px solid var(--border);
@@ -52,169 +51,223 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: var(--shadow);
       z-index: 1001;
+      box-shadow: var(--shadow);
     }
-    .brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
 
-    /* --- LAYOUT --- */
-    .main-container { display: flex; flex: 1; overflow: hidden; }
-    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    /* Main Layout */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden; /* Prevent full page scroll */
+    }
+
+    /* Sidebar */
     aside {
-      width: 350px;
+      width: 360px;
       background: var(--panel);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow-y: auto;
       z-index: 1000;
-      padding: 1.25rem;
     }
 
-    .sidebar-section { margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
-    h2 { font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 0; }
+    .sidebar-section {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
 
-    /* --- CONTROLS --- */
+    h2 { margin: 0 0 1rem 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    h3 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+
+    /* Controls Grid */
+    .control-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
     button.btn {
-      width: 100%;
       background: var(--panel);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 10px;
+      padding: 0.6rem 1rem;
       border-radius: 6px;
       cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
       text-align: left;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       transition: all 0.2s;
     }
+
     button.btn:hover { border-color: var(--primary); color: var(--primary); background: var(--bg); }
-    
+    button.btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .select-wrap {
+      margin-bottom: 1rem;
+    }
     select {
       width: 100%;
-      padding: 10px;
+      padding: 8px;
       border-radius: 6px;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);
-      margin-bottom: 8px;
     }
 
-    .stat-box {
+    /* Station List */
+    .stat-card {
       background: var(--bg);
-      padding: 12px;
-      border-radius: 8px;
-      text-align: center;
       border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
     }
-    .stat-num { font-size: 1.5rem; font-weight: 700; }
-    .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+    .stat-card:hover { border-color: var(--primary); }
+    .stat-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; font-size: 0.9rem;}
+    .stat-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); }
+    .score-badge { 
+      padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; color: white;
+    }
 
-    /* --- MAP --- */
-    #map-wrapper { flex: 1; position: relative; }
+    /* Map Area */
+    #map-wrapper {
+      flex: 1;
+      position: relative;
+    }
     #map { width: 100%; height: 100%; }
 
-    /* --- POPUP STYLING (Matches Screenshot) --- */
-    .leaflet-popup-content-wrapper {
+    /* Map Overlays */
+    .map-overlay-legend {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel);
+      padding: 12px 16px;
       border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      padding: 0;
-      overflow: hidden;
-    }
-    .leaflet-popup-content {
-      margin: 16px 20px;
-      font-family: 'Inter', sans-serif;
-      line-height: 1.5;
-      color: #333;
-      font-size: 13px;
-      width: 280px !important;
-    }
-    
-    .acc-popup .header { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
-    .acc-popup .title { font-weight: 700; font-size: 15px; color: #111; margin-bottom: 2px; }
-    .acc-popup .time { font-weight: 600; font-size: 13px; color: #444; }
-    .acc-popup .loc { font-size: 12px; color: #666; text-transform: uppercase; margin-top: 4px; }
-    
-    .acc-row { margin-bottom: 4px; display: flex; align-items: baseline; }
-    .acc-label { font-weight: 700; color: #111; margin-right: 6px; min-width: 65px; }
-    .acc-val { color: #333; }
-
-    /* --- LEGEND --- */
-    .legend {
-      position: absolute; bottom: 24px; right: 24px;
-      background: var(--panel); padding: 12px; border-radius: 8px;
-      font-size: 12px; border: 1px solid var(--border); z-index: 1000;
       box-shadow: var(--shadow);
+      z-index: 1000;
+      font-size: 0.85rem;
+      max-width: 300px;
+      border: 1px solid var(--border);
     }
-    .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    /* Utility */
+    .badge { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .badge.red { background: var(--danger); }
+    .badge.green { background: var(--success); }
+    .badge.blue { background: var(--primary); }
 
     @media (max-width: 768px) {
       .main-container { flex-direction: column; }
-      aside { width: 100%; height: 45%; order: 2; }
-      #map-wrapper { height: 55%; order: 1; }
+      aside { width: 100%; height: 40%; order: 2; }
+      #map-wrapper { height: 60%; order: 1; }
     }
   </style>
 </head>
 <body>
 
   <nav>
-    <div class="brand">🚲 Madrid Smart Mobility</div>
-    <button id="themeToggle" style="background:transparent; border:1px solid var(--border); padding:6px 12px; border-radius:20px; cursor:pointer; color:var(--text)">🌙 Dark Mode</button>
+    <div class="brand">
+      <div class="brand-icon">🚲</div>
+      <div>
+        Madrid Smart Mobility
+        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400">Analytics Dashboard</div>
+      </div>
+    </div>
+    <button id="themeToggle" class="btn">🌙 Dark Mode</button>
   </nav>
 
   <div class="main-container">
     <aside>
-      <!-- Stats -->
+      <!-- Stats Summary -->
       <div class="sidebar-section">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div class="stat-box">
-            <div class="stat-num" style="color:var(--primary)" id="stat-stations">0</div>
-            <div class="stat-label">Active Stations</div>
+          <div style="background:var(--bg); padding:10px; border-radius:8px; text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--primary)" id="stat-stations">0</div>
+            <div style="font-size:0.75rem; color:var(--text-muted)">Stations Monitored</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-num" style="color:var(--danger)" id="stat-accidents">0</div>
-            <div class="stat-label">Recorded Incidents</div>
+          <div style="background:var(--bg); padding:10px; border-radius:8px; text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--danger)" id="stat-accidents">0</div>
+            <div style="font-size:0.75rem; color:var(--text-muted)">Recent Incidents</div>
           </div>
         </div>
       </div>
 
-      <!-- Controls -->
+      <!-- Visualizations -->
       <div class="sidebar-section">
-        <h2>Map Layers</h2>
-        <button class="btn" id="btn-heat">🔥 Toggle Heatmap (Accidents)</button>
-        <button class="btn" id="btn-stations">🚲 Toggle Stations</button>
-        <button class="btn" id="btn-reset" style="color:var(--text-muted)">✕ Reset View</button>
-      </div>
-
-      <!-- Filters -->
-      <div class="sidebar-section">
-        <h2>Accident Filter</h2>
-        <select id="weatherFilter">
-          <option value="all">Weather: All Conditions</option>
-          <option value="Lluvia">Rain (Lluvia)</option>
-          <option value="Despejado">Clear (Despejado)</option>
-          <option value="Nublado">Cloudy (Nublado)</option>
-        </select>
-        <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">
-          Tip: Click on red/yellow markers to view the detailed accident report.
+        <h2>Visualization Layers</h2>
+        <div class="control-grid">
+          <button class="btn" id="btn-heat-trips">📊 Trip Density Heatmap</button>
+          <button class="btn" id="btn-heat-coll">🔥 Collision Heatmap</button>
+          <button class="btn" id="btn-safe-spots">🛡️ Highlight Safe Spots</button>
+          <button class="btn" id="btn-reset-map" style="color:var(--text-muted)">✕ Clear Layers</button>
         </div>
       </div>
 
-      <div style="font-size:11px; color:var(--text-muted); margin-top:auto;">
-        Data source: Mock Stations + Provided Accident Log (EPSG:25830)
+      <!-- Accident Filters -->
+      <div class="sidebar-section">
+        <h2>Accident Data Filter</h2>
+        <div class="select-wrap">
+          <select id="weatherFilter">
+            <option value="all">Weather: All Conditions</option>
+            <option value="Despejado">Clear (Despejado)</option>
+            <option value="Lluvia">Rain (Lluvia)</option>
+            <option value="Nublado">Cloudy (Nublado)</option>
+          </select>
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-muted)">
+          <span class="badge red"></span>Serious Injury
+          <span class="badge" style="background:#facc15"></span>Minor Injury
+          <span class="badge green"></span>No Injury
+        </div>
+      </div>
+
+      <!-- Routes -->
+      <div class="sidebar-section">
+        <h2>Example Routes</h2>
+        <div class="control-grid">
+          <button class="btn" id="route-sol-plaza">Direct: Sol → Plaza Mayor</button>
+          <button class="btn" id="route-sol-plaza-scenic">Scenic: Sol → Plaza Mayor (via Malasaña)</button>
+          <button class="btn" id="route-sol-atocha">Commute: Sol → Atocha</button>
+        </div>
+      </div>
+
+      <!-- Station List -->
+      <div class="sidebar-section" style="border-bottom:none;">
+        <h2>Station Status</h2>
+        <div id="station-list"></div>
       </div>
     </aside>
 
     <div id="map-wrapper">
       <div id="map"></div>
-      <div class="legend">
-        <div style="margin-bottom:4px; font-weight:700">Accident Severity</div>
-        <div><span class="dot" style="background:#ef4444"></span>Serious (Ingreso 24h)</div>
-        <div><span class="dot" style="background:#eab308"></span>Minor (Asistencia)</div>
-        <div><span class="dot" style="background:#22c55e"></span>None (Sin asistencia)</div>
-        <hr style="border:0; border-top:1px solid var(--border); margin:8px 0;">
-        <div style="margin-bottom:4px; font-weight:700">Stations</div>
-        <div><span class="dot" style="background:#3b82f6"></span>Bike Station</div>
+      <div class="map-overlay-legend" id="legend">
+        Select a layer or route to see details here.
       </div>
     </div>
   </div>
@@ -225,172 +278,281 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 
   <script>
-    // --- 1. DATA & CONFIG ---
-    
-    // Define Coordinate System (UTM Zone 30N to WGS84)
+    // --- 1. Configuration & Mock Data ---
     proj4.defs("EPSG:25830","+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs");
 
-    // Mock Station Data
     const stations = [
-      {id: '1001', name: 'Puerta del Sol', lat: 40.416775, lon: -3.703790, bikes: 8, cap: 25},
-      {id: '1012', name: 'Plaza Mayor', lat: 40.415524, lon: -3.707412, bikes: 5, cap: 20},
-      {id: '2030', name: 'Atocha Renfe', lat: 40.406876, lon: -3.690486, bikes: 18, cap: 30},
-      {id: '3120', name: 'Argüelles', lat: 40.432167, lon: -3.717857, bikes: 3, cap: 15},
-      {id: '5201', name: 'Malasaña', lat: 40.4259, lon: -3.7080, bikes: 6, cap: 15}
+      {id: '1001', name: 'Puerta del Sol', lat: 40.416775, lon: -3.703790, bikes: 8, cap: 25, trips: 150, collisions: 1},
+      {id: '1012', name: 'Plaza Mayor', lat: 40.415524, lon: -3.707412, bikes: 5, cap: 20, trips: 110, collisions: 0},
+      {id: '2030', name: 'Atocha Renfe', lat: 40.406876, lon: -3.690486, bikes: 18, cap: 30, trips: 240, collisions: 3},
+      {id: '3120', name: 'Argüelles', lat: 40.432167, lon: -3.717857, bikes: 3, cap: 15, trips: 45, collisions: 0},
+      {id: '4120', name: 'Chamartín', lat: 40.4720, lon: -3.6844, bikes: 10, cap: 25, trips: 80, collisions: 1},
+      {id: '5201', name: 'Malasaña', lat: 40.4259, lon: -3.7080, bikes: 6, cap: 15, trips: 95, collisions: 1}
     ];
 
-    // Detailed Accident Data (Parsed from your request)
     const accidentsRaw = [
-      { exp:"2023S040309", date:"2024-02-15", time:"14:05", loc:"CALL. TESORO / CALL. MINAS", dist:"Centro", type:"Colisión fronto-lateral", meteo:"Lluvia débil", veh:"Bicicleta", pers:"Conductor", age:"25-29", sex:"Hombre", lesion:"Asistencia sanitaria sólo en el lugar", x:440123, y:4475170 },
-      { exp:"2024S000027", date:"2024-01-01", time:"16:30", loc:"CALL. ALEJANDRO MORAN / CALL. GENERAL RICARDOS", dist:"Carabanchel", type:"Colisión fronto-lateral", meteo:"Despejado", veh:"Bicicleta EPAC (pedaleo asistido)", pers:"Conductor", age:"25-29", sex:"Hombre", lesion:"Asistencia sanitaria sólo en el lugar", x:437732, y:4470986 },
-      { exp:"2024S000058", date:"2024-01-02", time:"09:45", loc:"GTA. LOZARES / AVDA. REAL DE PINTO", dist:"Villaverde", type:"Caída", meteo:"Despejado", veh:"Bicicleta", pers:"Conductor", age:"70-74", sex:"Hombre", lesion:"Ingreso inferior o igual a 24 horas", x:439897, y:4465733 },
-      { exp:"2024S000081-C", date:"2024-01-02", time:"19:30", loc:"CALL. HORTALEZA, 96", dist:"Centro", type:"Atropello a persona", meteo:"Nublado", veh:"Bicicleta EPAC (pedaleo asistido)", pers:"Conductor", age:"30-34", sex:"Hombre", lesion:"Sin asistencia sanitaria", x:440785, y:4475122 },
-      { exp:"2024S000081-P", date:"2024-01-02", time:"19:30", loc:"CALL. HORTALEZA, 96", dist:"Centro", type:"Atropello a persona", meteo:"Nublado", veh:"Bicicleta EPAC (pedaleo asistido)", pers:"Peatón", age:"65-69", sex:"Hombre", lesion:"Ingreso inferior o igual a 24 horas", x:440785, y:4475122 },
-      { exp:"2024S000108", date:"2024-01-03", time:"08:30", loc:"CALL. BRAVO MURILLO, 154", dist:"Tetuán", type:"Alcance", meteo:"LLuvia intensa", veh:"Bicicleta EPAC (pedaleo asistido)", pers:"Conductor", age:"35-39", sex:"Hombre", lesion:"Asistencia sanitaria sólo en el lugar", x:440364, y:4478099 }
+      { exp:"2023S04", date:"2024-02-15", loc:"CALL. TESORO", type:"Colisión", lesion:"Asistencia", x:440123, y:4475170, meteo: "Lluvia débil" },
+      { exp:"2024S01", date:"2024-01-01", loc:"GEN. RICARDOS", type:"Colisión", lesion:"Asistencia", x:437732, y:4470986, meteo: "Despejado" },
+      { exp:"2024S02", date:"2024-01-02", loc:"VILLAVERDE", type:"Caída", lesion:"Ingreso 24h", x:439897, y:4465733, meteo: "Despejado" },
+      { exp:"2024S03", date:"2024-01-02", loc:"HORTALEZA", type:"Atropello", lesion:"Sin asistencia", x:440785, y:4475122, meteo: "Nublado" },
+      { exp:"2024S04", date:"2024-01-03", loc:"BRAVO MURILLO", type:"Alcance", lesion:"Asistencia", x:440364, y:4478099, meteo: "Lluvia intensa" },
+      { exp:"2024S05", date:"2024-01-03", loc:"P. EXTREMADURA", type:"Caída", lesion:"Asistencia", x:438247, y:4473924, meteo: "Lluvia débil" },
+      { exp:"2024S06", date:"2024-01-04", loc:"FUENCARRAL", type:"Colisión", lesion:"Ingreso 24h", x:441783, y:4482707, meteo: "Lluvia intensa" }
     ];
 
-    // --- 2. MAP INITIALIZATION ---
+    // Process accidents: convert coords & assign color/severity
+    const accidents = accidentsRaw.map(a => {
+      const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
+      let color = '#22c55e'; // green (safe/minor)
+      let weight = 1;
+      
+      if(a.lesion.includes("Ingreso")) { color = '#ef4444'; weight=3; }
+      else if(a.lesion.includes("Asistencia")) { color = '#eab308'; weight=1.5; }
+      
+      return { ...a, lat, lon, color, heatWeight: weight };
+    });
+
+    // --- 2. Map Initialization ---
+    
     const map = L.map('map', { zoomControl: false }).setView([40.4168, -3.7038], 13);
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Tile Layers
-    const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CartoDB' });
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CartoDB' });
-    lightTiles.addTo(map);
+    // Tile Layers (CartoDB for better look)
+    const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CartoDB'
+    });
+    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CartoDB'
+    });
+    
+    lightTiles.addTo(map); // Default
 
     // Layer Groups
-    const stationLayer = L.layerGroup().addTo(map);
-    const accidentLayer = L.layerGroup().addTo(map);
-    let heatLayer = null;
+    const layers = {
+      stations: L.layerGroup().addTo(map),
+      accidents: L.layerGroup().addTo(map),
+      heat: L.layerGroup(), // Not added by default
+      routes: L.layerGroup().addTo(map)
+    };
 
-    // --- 3. HELPERS ---
-    
-    // Determine color based on injury severity
-    function getSeverityColor(l) {
-      if(l.includes("Ingreso")) return "#ef4444"; // Red (Serious)
-      if(l.includes("Sin asistencia")) return "#22c55e"; // Green (None)
-      return "#eab308"; // Yellow (Minor)
+    // --- 3. Logic Functions ---
+
+    // Safety Score: 0 to 1 (1 is safest)
+    function getSafetyScore(s) {
+      const utilization = s.trips / 300; // Normalize trips
+      const danger = Math.min(s.collisions, 5) / 5; 
+      let score = (0.4 * (1 - danger)) + (0.6 * (s.bikes / s.cap)); 
+      return Math.max(0.1, Math.min(1, score));
     }
 
-    // Shorten text for display
-    function formatLesion(l) {
-      if(l.includes("Ingreso")) return "Ingreso 24h";
-      if(l.includes("Sin asistencia")) return "Sin asistencia";
-      if(l.includes("Asistencia")) return "Asistencia en lugar";
-      return l;
+    function getScoreColor(score) {
+      if (score >= 0.7) return '#22c55e';
+      if (score >= 0.4) return '#eab308';
+      return '#ef4444';
     }
 
-    function formatVehicle(v) {
-      if(v.includes("EPAC")) return "electric bicycle";
-      return "bicycle";
-    }
-
-    // --- 4. RENDER FUNCTIONS ---
-
-    function renderStations() {
-      stationLayer.clearLayers();
-      stations.forEach(s => {
-        L.circleMarker([s.lat, s.lon], {
-          radius: 6, color: '#fff', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.9
-        }).bindPopup(`<b>${s.name}</b><br>Bikes available: ${s.bikes}/${s.cap}`)
-        .addTo(stationLayer);
-      });
+    function updateStats() {
       document.getElementById('stat-stations').innerText = stations.length;
+      document.getElementById('stat-accidents').innerText = accidents.length;
     }
 
-    function renderAccidents(weatherFilter = "all") {
-      accidentLayer.clearLayers();
+    // Render Stations
+    function renderStations() {
+      layers.stations.clearLayers();
+      const listEl = document.getElementById('station-list');
+      listEl.innerHTML = '';
+
+      stations.forEach(s => {
+        const score = getSafetyScore(s);
+        const color = getScoreColor(score);
+
+        // Map Marker (Circle size based on capacity)
+        const radius = 4 + (s.cap / 4); 
+        const marker = L.circleMarker([s.lat, s.lon], {
+          radius: radius,
+          fillColor: color,
+          color: '#fff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(layers.stations);
+
+        const popupContent = `
+          <div style="font-family:Inter; font-size:13px;">
+            <strong style="font-size:14px">${s.name}</strong><br>
+            <div style="margin-top:4px; display:flex; gap:8px; color:#666;">
+              <span>🚲 ${s.bikes}/${s.cap}</span>
+              <span>⚠️ ${s.collisions} incidents</span>
+            </div>
+            <div style="margin-top:6px; font-weight:600; color:${color}">
+              Safety Score: ${(score * 100).toFixed(0)}%
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        // Sidebar Item
+        const item = document.createElement('div');
+        item.className = 'stat-card';
+        item.innerHTML = `
+          <div class="stat-header">
+            <span>${s.name}</span>
+            <span class="score-badge" style="background:${color}">${(score*100).toFixed(0)}</span>
+          </div>
+          <div class="stat-row">
+            <span>Avail: ${s.bikes}/${s.cap}</span>
+            <span>Trips: ${s.trips}</span>
+          </div>
+        `;
+        item.addEventListener('click', () => {
+          map.flyTo([s.lat, s.lon], 15);
+          marker.openPopup();
+        });
+        listEl.appendChild(item);
+      });
+    }
+
+    // Render Accidents based on filter
+    function renderAccidents(filterWeather = 'all') {
+      layers.accidents.clearLayers();
       
-      const filtered = accidentsRaw.filter(a => {
-        return weatherFilter === "all" || a.meteo.toLowerCase().includes(weatherFilter.toLowerCase());
+      const filtered = accidents.filter(a => {
+        if(filterWeather === 'all') return true;
+        return a.meteo.toLowerCase().includes(filterWeather.toLowerCase());
       });
 
       filtered.forEach(a => {
-        // Convert Coords
-        const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
-        // Offset slighty if it's the pedestrian in the same accident to avoid perfect overlap
-        const offsetLat = (a.pers === 'Peatón') ? lat + 0.00005 : lat;
+        const marker = L.circleMarker([a.lat, a.lon], {
+          radius: 6,
+          fillColor: a.color,
+          color: '#fff',
+          weight: 1,
+          fillOpacity: 0.7
+        }).addTo(layers.accidents);
 
-        const color = getSeverityColor(a.lesion);
-        const vehStr = formatVehicle(a.veh);
-        const lesStr = formatLesion(a.lesion);
-
-        const marker = L.circleMarker([offsetLat, lon], {
-          radius: 9, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
-        }).addTo(accidentLayer);
-
-        // POPUP HTML (Matches Screenshot)
-        const popupHTML = `
-          <div class="acc-popup">
-            <div class="header">
-              <div class="title">Accidente ${a.exp}</div>
-              <div class="time">${a.date} ${a.time}</div>
-              <div class="loc">${a.loc}</div>
-            </div>
-            <div class="acc-row"><span class="acc-label">Tipo:</span> <span class="acc-val">${a.type}</span></div>
-            <div class="acc-row"><span class="acc-label">Distrito:</span> <span class="acc-val">${a.dist}</span></div>
-            <div class="acc-row"><span class="acc-label">Vehículo:</span> <span class="acc-val">${vehStr}</span></div>
-            <div class="acc-row"><span class="acc-label">Persona:</span> <span class="acc-val">${a.pers} (${a.age})</span></div>
-            <div class="acc-row"><span class="acc-label">Meteo:</span> <span class="acc-val">${a.meteo}</span></div>
-            <div class="acc-row"><span class="acc-label">Lesividad:</span> <span class="acc-val" style="color:${color}; font-weight:700">${lesStr}</span></div>
-          </div>
-        `;
-        marker.bindPopup(popupHTML);
+        marker.bindTooltip(`<b>${a.type}</b><br>${a.meteo}<br>${a.lesion}`, {
+          direction: 'top',
+          offset: [0, -5]
+        });
       });
-
-      document.getElementById('stat-accidents').innerText = filtered.length;
     }
 
-    // --- 5. INTERACTIONS ---
+    // Heatmap Logic
+    function toggleHeatmap(type) {
+      layers.heat.clearLayers();
+      if (map.hasLayer(layers.heat)) map.removeLayer(layers.heat);
 
-    // Toggle Heatmap
-    document.getElementById('btn-heat').addEventListener('click', () => {
-      if(heatLayer) {
-        map.removeLayer(heatLayer);
-        heatLayer = null;
+      let points = [];
+      let config = { radius: 25, blur: 15, maxZoom: 16 };
+
+      if (type === 'trips') {
+        points = stations.map(s => [s.lat, s.lon, s.trips / 50]); // scale intensity
+        config.radius = 40;
+        document.getElementById('legend').innerText = "Heatmap: High density of bicycle trips";
+      } else if (type === 'collisions') {
+        // Use accident data for collision heat, not just station data
+        points = accidents.map(a => [a.lat, a.lon, a.heatWeight]);
+        config.radius = 30;
+        document.getElementById('legend').innerText = "Heatmap: Accident concentration zones";
+      }
+
+      L.heatLayer(points, config).addTo(layers.heat);
+      map.addLayer(layers.heat);
+    }
+
+    // Routing Logic
+    function drawRoute(startId, endId, isScenic = false) {
+      layers.routes.clearLayers();
+      layers.heat.clearLayers(); // Clear noise
+
+      const s = stations.find(st => st.id === startId);
+      const e = stations.find(st => st.id === endId);
+      if (!s || !e) return;
+
+      let latlngs = [];
+      let color = isScenic ? '#22c55e' : '#3b82f6'; // Green for scenic, Blue for direct
+      let dashArray = isScenic ? '10, 10' : null;
+
+      if (isScenic) {
+        // Mock waypoint (Malasaña)
+        const waypoint = stations.find(st => st.id === '5201');
+        latlngs = [[s.lat, s.lon], [waypoint.lat, waypoint.lon], [e.lat, e.lon]];
+        document.getElementById('legend').innerHTML = `<b>Scenic Route:</b> ${s.name} → ${waypoint.name} → ${e.name}<br>Distance: ~2.8 km`;
       } else {
-        const points = accidentsRaw.map(a => {
-          const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
-          return [lat, lon, 1]; // weight 1
-        });
-        heatLayer = L.heatLayer(points, { radius: 35, blur: 20, maxZoom: 15 }).addTo(map);
+        latlngs = [[s.lat, s.lon], [e.lat, e.lon]];
+        // Calculate straight line dist roughly
+        const dist = map.distance([s.lat, s.lon], [e.lat, e.lon]) / 1000;
+        document.getElementById('legend').innerHTML = `<b>Direct Route:</b> ${s.name} → ${e.name}<br>Distance: ~${dist.toFixed(2)} km (Linear)`;
+      }
+
+      const poly = L.polyline(latlngs, { color, weight: 5, opacity: 0.8, dashArray }).addTo(layers.routes);
+      map.fitBounds(poly.getBounds(), { padding: [50, 50] });
+      
+      // Add Start/End markers on top of route
+      L.marker([s.lat, s.lon]).addTo(layers.routes).bindPopup("Start: " + s.name);
+      L.marker([e.lat, e.lon]).addTo(layers.routes).bindPopup("End: " + e.name);
+    }
+
+    function highlightSafeSpots() {
+      layers.routes.clearLayers();
+      const safeStations = stations
+        .map(s => ({...s, score: getSafetyScore(s)}))
+        .sort((a,b) => b.score - a.score)
+        .slice(0, 3); // Top 3
+
+      safeStations.forEach(s => {
+        L.circleMarker([s.lat, s.lon], {
+          radius: 20, color: '#22c55e', fill: false, weight: 3
+        }).addTo(layers.routes); // Add ring effect
+      });
+      
+      document.getElementById('legend').innerText = "Highlighted: Top 3 safest stations based on availability and incident history.";
+      map.setView([40.42, -3.70], 13);
+    }
+
+    // --- 4. Event Listeners ---
+
+    // Theme Toggle
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      const isDark = document.body.classList.toggle('dark');
+      this.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+      
+      if(isDark) {
+        map.removeLayer(lightTiles);
+        darkTiles.addTo(map);
+      } else {
+        map.removeLayer(darkTiles);
+        lightTiles.addTo(map);
       }
     });
 
-    // Toggle Stations
-    document.getElementById('btn-stations').addEventListener('click', () => {
-      if(map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
-      else map.addLayer(stationLayer);
-    });
-
-    // Reset
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-      if(!map.hasLayer(stationLayer)) map.addLayer(stationLayer);
+    // Heatmap Buttons
+    document.getElementById('btn-heat-trips').addEventListener('click', () => toggleHeatmap('trips'));
+    document.getElementById('btn-heat-coll').addEventListener('click', () => toggleHeatmap('collisions'));
+    document.getElementById('btn-safe-spots').addEventListener('click', highlightSafeSpots);
+    
+    document.getElementById('btn-reset-map').addEventListener('click', () => {
+      layers.heat.clearLayers();
+      map.removeLayer(layers.heat);
+      layers.routes.clearLayers();
       map.setView([40.4168, -3.7038], 13);
-      document.getElementById('weatherFilter').value = "all";
-      renderAccidents("all");
+      document.getElementById('legend').innerText = "Map reset.";
     });
 
-    // Filter Change
+    // Routes
+    document.getElementById('route-sol-plaza').addEventListener('click', () => drawRoute('1001', '1012', false));
+    document.getElementById('route-sol-plaza-scenic').addEventListener('click', () => drawRoute('1001', '1012', true));
+    document.getElementById('route-sol-atocha').addEventListener('click', () => drawRoute('1001', '2030', false));
+
+    // Weather Filter
     document.getElementById('weatherFilter').addEventListener('change', (e) => {
       renderAccidents(e.target.value);
     });
 
-    // Dark Mode Toggle
-    document.getElementById('themeToggle').addEventListener('click', function() {
-      const isDark = document.body.classList.toggle('dark');
-      this.innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
-      if(isDark) {
-        map.removeLayer(lightTiles); darkTiles.addTo(map);
-      } else {
-        map.removeLayer(darkTiles); lightTiles.addTo(map);
-      }
-    });
-
-    // --- 6. INITIALIZE ---
+    // --- 5. Init ---
     renderStations();
     renderAccidents();
+    updateStats();
 
   </script>
 </body>
