@@ -258,8 +258,12 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
   <!-- Leaflet + heat plugin -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 
   <script>
+    // EPSG:25830 → WGS84 converters
+    proj4.defs("EPSG:25830","+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs");
+
     // Mock dataset: stations with coordinates, availability, trip_count, collision_count
     const stations = [
       {id: '1001', name: 'Puerta del Sol', lat: 40.416775, lon: -3.703790, bikes: 8, cap: 20, trips: 120, collisions: 1},
@@ -268,6 +272,130 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
       {id: '3120', name: 'Argüelles', lat: 40.432167, lon: -3.717857, bikes: 3, cap: 18, trips: 45, collisions: 0},
       {id: '4120', name: 'Chamartín', lat: 40.4720, lon: -3.6844, bikes: 10, cap: 20, trips: 60, collisions: 1},
       {id: '5201', name: 'Malasaña', lat: 40.4259, lon: -3.7080, bikes: 6, cap: 15, trips: 80, collisions: 1}
+    ];
+
+    // Accident dataset (UTM coordinates in EPSG:25830)
+    const accidents = [
+      {
+        expediente:"2023S040309",
+        fecha:"2024-02-15",
+        hora:"14:05",
+        localizacion:"CALL. TESORO / CALL. MINAS",
+        distrito:"Centro",
+        tipo:"Colisión fronto-lateral",
+        edad:"25-29",
+        persona:"Conductor",
+        vehiculo:"bicycle",
+        meteo:"Lluvia débil",
+        lesividad:"Asistencia sanitaria en el lugar",
+        x:440123,
+        y:4475170
+      },
+      {
+        expediente:"2024S000027",
+        fecha:"2024-01-01",
+        hora:"16:30",
+        localizacion:"CALL. ALEJANDRO MORAN / CALL. GENERAL RICARDOS",
+        distrito:"Carabanchel",
+        tipo:"Colisión fronto-lateral",
+        edad:"25-29",
+        persona:"Conductor",
+        vehiculo:"electric bicycle",
+        meteo:"Despejado",
+        lesividad:"Asistencia sanitaria en el lugar",
+        x:437732,
+        y:4470986
+      },
+      {
+        expediente:"2024S000058",
+        fecha:"2024-01-02",
+        hora:"09:45",
+        localizacion:"GTA. LOZARES / AVDA. REAL DE PINTO",
+        distrito:"Villaverde",
+        tipo:"Caída",
+        edad:"70-74",
+        persona:"Conductor",
+        vehiculo:"bicycle",
+        meteo:"Despejado",
+        lesividad:"Ingreso 24h",
+        x:439897,
+        y:4465733
+      },
+      {
+        expediente:"2024S000081-C",
+        fecha:"2024-01-02",
+        hora:"19:30",
+        localizacion:"CALL. HORTALEZA, 96",
+        distrito:"Centro",
+        tipo:"Atropello a persona",
+        edad:"30-34",
+        persona:"Conductor",
+        vehiculo:"electric bicycle",
+        meteo:"Nublado",
+        lesividad:"Sin asistencia",
+        x:440785,
+        y:4475122
+      },
+      {
+        expediente:"2024S000081-P",
+        fecha:"2024-01-02",
+        hora:"19:30",
+        localizacion:"CALL. HORTALEZA, 96",
+        distrito:"Centro",
+        tipo:"Atropello a persona",
+        edad:"65-69",
+        persona:"Peatón",
+        vehiculo:"electric bicycle",
+        meteo:"Nublado",
+        lesividad:"Ingreso 24h",
+        x:440785,
+        y:4475122
+      },
+      {
+        expediente:"2024S000108",
+        fecha:"2024-01-03",
+        hora:"08:30",
+        localizacion:"CALL. BRAVO MURILLO, 154",
+        distrito:"Tetuán",
+        tipo:"Alcance",
+        edad:"35-39",
+        persona:"Conductor",
+        vehiculo:"electric bicycle",
+        meteo:"Lluvia intensa",
+        lesividad:"Asistencia en el lugar",
+        x:440364,
+        y:4478099
+      },
+      {
+        expediente:"2024S000168",
+        fecha:"2024-01-03",
+        hora:"11:30",
+        localizacion:"PASEO. EXTREMADURA, 21",
+        distrito:"Latina",
+        tipo:"Caída",
+        edad:"25-29",
+        persona:"Conductor",
+        vehiculo:"bicycle",
+        meteo:"Lluvia débil",
+        lesividad:"Asistencia en el lugar",
+        x:438247,
+        y:4473924
+      },
+      {
+        expediente:"2024S000274",
+        fecha:"2024-01-04",
+        hora:"20:30",
+        localizacion:"CALL. NTRA. SRA. VALVERDE / CALL. ISLA PARAGUA",
+        distrito:"Fuencarral-El Pardo",
+        tipo:"Colisión fronto-lateral",
+        edad:"30-34",
+        persona:"Conductor",
+        vehiculo:"bicycle",
+        meteo:"Lluvia intensa",
+        lesividad:"Ingreso 24h",
+        x:441783,
+        y:4482707
+      }
     ];
 
     // Prepare map
@@ -281,6 +409,8 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
     const stationLayer = L.layerGroup().addTo(map);
     let heatLayer = null;
     let routeLayer = L.layerGroup().addTo(map);
+    const accidentLayer = L.layerGroup().addTo(map);
+    let accidentHeatLayer = null;
 
     // Utility: color by safety score
     function safetyScore(s){
@@ -449,6 +579,59 @@ Open this file locally or deploy via GitHub Pages / Vercel. The map uses OpenStr
     if (sol) {
       map.setView([sol.lat,sol.lon],14);
     }
+
+    // Convert UTM → lat/lon and add accident markers
+    function plotAccidents() {
+      accidentLayer.clearLayers();
+      const heatPoints = [];
+
+      accidents.forEach(a => {
+        const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
+
+        // Heatmap weight: more severe → stronger
+        const severityWeight = a.lesividad.includes("Ingreso") ? 2 :
+                               a.lesividad.includes("Asistencia") ? 1.2 : 1;
+
+        heatPoints.push([lat, lon, severityWeight]);
+
+        // Color by severity
+        const color =
+          a.lesividad.includes("Ingreso") ? "#ef4444" :     // serious
+          a.lesividad.includes("Asistencia") ? "#facc15" :  // mild
+          "#22c55e";                                        // no injury
+
+        const marker = L.circleMarker([lat, lon], {
+          radius: 8,
+          fillColor: color,
+          fillOpacity: 0.85,
+          color: "#fff",
+          weight: 1
+        }).addTo(accidentLayer);
+
+        marker.bindPopup(`
+          <strong>Accidente ${a.expediente}</strong><br/>
+          <b>${a.fecha} ${a.hora}</b><br/>
+          ${a.localizacion}<br/><br/>
+          <b>Tipo:</b> ${a.tipo}<br/>
+          <b>Distrito:</b> ${a.distrito}<br/>
+          <b>Vehículo:</b> ${a.vehiculo}<br/>
+          <b>Persona:</b> ${a.persona} (${a.edad})<br/>
+          <b>Meteo:</b> ${a.meteo}<br/>
+          <b>Lesividad:</b> ${a.lesividad}
+        `);
+      });
+
+      // Build heatmap layer
+      if (accidentHeatLayer) map.removeLayer(accidentHeatLayer);
+      accidentHeatLayer = L.heatLayer(heatPoints, {
+        radius: 45,
+        blur: 30,
+        maxZoom: 17
+      }).addTo(map);
+    }
+
+    // Plot accidents on map load
+    plotAccidents();
 
   </script>
 
