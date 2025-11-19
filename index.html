@@ -556,503 +556,89 @@
         return `${localizacion}, ${trimmed}`;
       }
 
-      const accidentDataset = [
-        {
-          expediente: "2023S040309",
-          fecha: "2024-02-15",
-          hora: "14:05:00",
-          localizacion: "CALL. TESORO / CALL. MINAS",
-          numero: "18",
-          distrito: "Centro",
-          estado_meteorologico: "Lluvia débil",
-          tipo_accidente: "Colisión fronto-lateral",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 25 a 29 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 440123,
-          coordenada_y_utm: 4475170,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000027",
-          fecha: "2024-01-01",
-          hora: "16:30:00",
-          localizacion: "CALL. ALEJANDRO MORAN / CALL. GENERAL RICARDOS",
-          numero: "2",
-          distrito: "Carabanchel",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Colisión fronto-lateral",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 25 a 29 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 437732,
-          coordenada_y_utm: 4470986,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000058",
-          fecha: "2024-01-02",
-          hora: "09:45:00",
-          localizacion: "GTA. LOZARES / AVDA. REAL DE PINTO",
-          numero: "0",
-          distrito: "Villaverde",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 70 a 74 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 439897,
-          coordenada_y_utm: 4465733,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000081",
-          fecha: "2024-01-02",
-          hora: "19:30:00",
-          localizacion: "CALL. HORTALEZA, 96",
-          numero: "96",
-          distrito: "Centro",
-          estado_meteorologico: "Nublado",
-          tipo_accidente: "Atropello a persona",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 30 a 34 años",
-          sexo: "Hombre",
-          lesividad: "Sin asistencia sanitaria",
-          coordenada_x_utm: 440785,
-          coordenada_y_utm: 4475122,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000081",
-          fecha: "2024-01-02",
-          hora: "19:30:00",
-          localizacion: "CALL. HORTALEZA, 96",
-          numero: "96",
-          distrito: "Centro",
-          estado_meteorologico: "Nublado",
-          tipo_accidente: "Atropello a persona",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Peatón",
-          rango_edad: "De 65 a 69 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 440785,
-          coordenada_y_utm: 4475122,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000108",
-          fecha: "2024-01-03",
-          hora: "08:30:00",
-          localizacion: "CALL. BRAVO MURILLO, 154",
-          numero: "154",
-          distrito: "Tetuán",
-          estado_meteorologico: "LLuvia intensa",
-          tipo_accidente: "Alcance",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 35 a 39 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 440364,
-          coordenada_y_utm: 4478099,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000168",
-          fecha: "2024-01-03",
-          hora: "11:30:00",
-          localizacion: "PASEO. EXTREMADURA, 21",
-          numero: "21",
-          distrito: "Latina",
-          estado_meteorologico: "Lluvia débil",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 25 a 29 años",
-          sexo: "Mujer",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 438247,
-          coordenada_y_utm: 4473924,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000274",
-          fecha: "2024-01-04",
-          hora: "20:30:00",
-          localizacion: "CALL. NUESTRA SEÑORA DE VALVERDE / CALL. ISLA PARAGUA",
-          numero: "37",
-          distrito: "Fuencarral-El Pardo",
-          estado_meteorologico: "LLuvia intensa",
-          tipo_accidente: "Colisión fronto-lateral",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 30 a 34 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 441783,
-          coordenada_y_utm: 4482707,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000275",
-          fecha: "2024-01-04",
-          hora: "20:05:00",
-          localizacion: "CALL. SERRANO / CALL. CONDE DE ARANDA",
-          numero: "10",
-          distrito: "Salamanca",
-          estado_meteorologico: "Lluvia débil",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 55 a 59 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso superior a 24 horas",
-          coordenada_x_utm: 441603,
-          coordenada_y_utm: 4474805,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000361",
-          fecha: "2024-01-06",
-          hora: "00:45:00",
-          localizacion: "CALL. ALCALA / CALL. JULIO CAMBA",
-          numero: "200A",
-          distrito: "Salamanca",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Alcance",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 21 a 24 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso superior a 24 horas",
-          coordenada_x_utm: 443677,
-          coordenada_y_utm: 4475741,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000389",
-          fecha: "2024-01-06",
-          hora: "13:08:00",
-          localizacion: "CALL. ALEJANDRO MORAN / CALL. JUAN FRANCISCO",
-          numero: "11",
-          distrito: "Carabanchel",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Colisión fronto-lateral",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 21 a 24 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 437784,
-          coordenada_y_utm: 4470932,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000469",
-          fecha: "2024-01-07",
-          hora: "13:15:00",
-          localizacion: "CTRA. TELEFERICO, 1",
-          numero: "1",
-          distrito: "Moncloa-Aravaca",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 10 a 14 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria ambulatoria con posterioridad",
-          coordenada_x_utm: 435993,
-          coordenada_y_utm: 4474892,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000469",
-          fecha: "2024-01-07",
-          hora: "13:15:00",
-          localizacion: "CTRA. TELEFERICO, 1",
-          numero: "1",
-          distrito: "Moncloa-Aravaca",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 18 a 20 años",
-          sexo: "Hombre",
-          lesividad: "Sin asistencia sanitaria",
-          coordenada_x_utm: 435993,
-          coordenada_y_utm: 4474892,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000511",
-          fecha: "2024-01-08",
-          hora: "11:00:00",
-          localizacion: "CALL. ALCALA, 265",
-          numero: "265",
-          distrito: "Ciudad Lineal",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Colisión lateral",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 15 a 17 años",
-          sexo: "Hombre",
-          lesividad: "Sin asistencia sanitaria",
-          coordenada_x_utm: 444242,
-          coordenada_y_utm: 4475898,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000682",
-          fecha: "2024-01-09",
-          hora: "16:20:00",
-          localizacion: "CALL. AYALA, 1",
-          numero: "1",
-          distrito: "Salamanca",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Alcance",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 25 a 29 años",
-          sexo: "Mujer",
-          lesividad:
-            "Asistencia sanitaria inmediata en centro de salud o mutua",
-          coordenada_x_utm: 441553,
-          coordenada_y_utm: 4475486,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000803",
-          fecha: "2024-01-10",
-          hora: "08:15:00",
-          localizacion: "PASEO. PONTONES, 18",
-          numero: "18",
-          distrito: "Arganzuela",
-          estado_meteorologico: "Nublado",
-          tipo_accidente: "Colisión fronto-lateral",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 15 a 17 años",
-          sexo: "Mujer",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 439123,
-          coordenada_y_utm: 4472870,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000909",
-          fecha: "2024-01-11",
-          hora: "15:20:00",
-          localizacion: "CALL. ALBADALEJO, 42",
-          numero: "42",
-          distrito: "San Blas-Canillejas",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 21 a 24 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria sólo en el lugar del accidente",
-          coordenada_x_utm: 447764,
-          coordenada_y_utm: 4476314,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S000988",
-          fecha: "2024-01-12",
-          hora: "16:40:00",
-          localizacion: "CALL. ANTONIO LOPEZ, 256A",
-          numero: "256A",
-          distrito: "Usera",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Colisión lateral",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "Desconocido",
-          sexo: "Hombre",
-          lesividad: "Sin asistencia sanitaria",
-          coordenada_x_utm: 440958,
-          coordenada_y_utm: 4470107,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001002",
-          fecha: "2024-01-12",
-          hora: "17:12:00",
-          localizacion: "CALL. OLIVAR, 52",
-          numero: "52",
-          distrito: "Centro",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Atropello a persona",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 35 a 39 años",
-          sexo: "Mujer",
-          lesividad: "Sin asistencia sanitaria",
-          coordenada_x_utm: 440486,
-          coordenada_y_utm: 4473427,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001002",
-          fecha: "2024-01-12",
-          hora: "17:12:00",
-          localizacion: "CALL. OLIVAR, 52",
-          numero: "52",
-          distrito: "Centro",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Atropello a persona",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Peatón",
-          rango_edad: "De 65 a 69 años",
-          sexo: "Mujer",
-          lesividad: "",
-          coordenada_x_utm: 440486,
-          coordenada_y_utm: 4473427,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001006",
-          fecha: "2024-01-12",
-          hora: "14:35:00",
-          localizacion: "CALL. LUCHANA, 16",
-          numero: "16",
-          distrito: "Chamberí",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Alcance",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 15 a 17 años",
-          sexo: "Hombre",
-          lesividad: "",
-          coordenada_x_utm: 440573,
-          coordenada_y_utm: 4475744,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001024",
-          fecha: "2024-01-12",
-          hora: "22:00:00",
-          localizacion: "CALL. MENDEZ ALVARO, 21",
-          numero: "21",
-          distrito: "Arganzuela",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Alcance",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 21 a 24 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 441837,
-          coordenada_y_utm: 4472409,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001264",
-          fecha: "2024-01-13",
-          hora: "08:25:00",
-          localizacion: "CALL. TOLEDO, 172",
-          numero: "172",
-          distrito: "Arganzuela",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "electric bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 30 a 34 años",
-          sexo: "Hombre",
-          lesividad: "Asistencia sanitaria ambulatoria con posterioridad",
-          coordenada_x_utm: 439420,
-          coordenada_y_utm: 4472618,
-          positiva_alcohol: true,
-          positiva_droga: false,
-        },
-        {
-          expediente: "2024S001308",
-          fecha: "2024-01-13",
-          hora: "17:45:00",
-          localizacion: "SENDA FLUVIAL DEL MANZANARES S/N",
-          numero: "43",
-          distrito: "Moncloa-Aravaca",
-          estado_meteorologico: "Despejado",
-          tipo_accidente: "Caída",
-          tipo_vehiculo: "bicycle",
-          tipo_persona: "Conductor",
-          rango_edad: "De 45 a 49 años",
-          sexo: "Hombre",
-          lesividad: "Ingreso inferior o igual a 24 horas",
-          coordenada_x_utm: 436147,
-          coordenada_y_utm: 4480165,
-          positiva_alcohol: false,
-          positiva_droga: false,
-        },
-      ];
+      let accidents = [];
 
-      const accidentsRaw = accidentDataset.map((row) => ({
-        exp: row.expediente,
-        date: `${row.fecha}T${row.hora}`,
-        loc: formatLocation(row.localizacion, row.numero),
-        tipo: row.tipo_accidente,
-        lesion: row.lesividad || "Sin dato",
-        x: Number(row.coordenada_x_utm),
-        y: Number(row.coordenada_y_utm),
-        meteo: row.estado_meteorologico,
-        distrito: row.distrito,
-        vehiculo: normalizeVehicle(row.tipo_vehiculo),
-        persona: row.tipo_persona,
-        edad: row.rango_edad || "Desconocido",
-        sexo: row.sexo || "Desconocido",
-        positivaAlcohol: Boolean(row.positiva_alcohol),
-        positivaDroga: Boolean(row.positiva_droga),
-      }));
+      function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        return lines.slice(1).map(line => {
+            const values = [];
+            let current = '';
+            let inQuote = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuote = !inQuote;
+                } else if (char === ',' && !inQuote) {
+                    values.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            values.push(current.trim().replace(/^"|"$/g, ''));
+            
+            return headers.reduce((obj, header, index) => {
+                obj[header] = values[index];
+                return obj;
+            }, {});
+        });
+      }
 
-      // Process accidents: convert coords & assign color/severity
-      const accidents = accidentsRaw.map((a) => {
-        const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
-        let color = "#22c55e"; // green (safe/minor)
-        let weight = 1;
-        let severity = "Sin asistencia";
+      async function loadAccidentData() {
+        try {
+          const response = await fetch('accidents.csv');
+          if (!response.ok) throw new Error('Failed to load CSV');
+          const text = await response.text();
+          const rawData = parseCSV(text);
 
-        if (a.lesion.includes("Ingreso")) {
-          color = "#ef4444";
-          weight = 3;
-          severity = "Ingreso 24h";
-        } else if (a.lesion.includes("Asistencia")) {
-          color = "#eab308";
-          weight = 1.5;
-          severity = "Asistencia";
+          const accidentsRaw = rawData.map((row) => ({
+            exp: row.num_expediente,
+            date: `${row.fecha}T${row.hora}`,
+            loc: formatLocation(row.localizacion, row.numero),
+            tipo: row.tipo_accidente,
+            lesion: row.lesividad || "Sin dato",
+            x: Number(row.coordenada_x_utm),
+            y: Number(row.coordenada_y_utm),
+            meteo: row.estado_meteorológico,
+            distrito: row.distrito,
+            vehiculo: normalizeVehicle(row.tipo_vehiculo),
+            persona: row.tipo_persona,
+            edad: row.rango_edad || "Desconocido",
+            sexo: row.sexo || "Desconocido",
+            positivaAlcohol: row.positiva_alcohol === 'true',
+            positivaDroga: row.positiva_droga === 'true',
+          }));
+
+          accidents = accidentsRaw.map((a) => {
+            const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
+            let color = "#22c55e"; // green (safe/minor)
+            let weight = 1;
+            let severity = "Sin asistencia";
+
+            if (a.lesion.includes("Ingreso")) {
+              color = "#ef4444";
+              weight = 3;
+              severity = "Ingreso 24h";
+            } else if (a.lesion.includes("Asistencia")) {
+              color = "#eab308";
+              weight = 1.5;
+              severity = "Asistencia";
+            }
+
+            return { ...a, lat, lon, color, heatWeight: weight, severity };
+          });
+
+          renderAccidents();
+          updateStats();
+
+        } catch (err) {
+          console.error("Error loading accident data:", err);
+          alert("Error loading accident data. Please ensure you are running this on a local server.");
         }
-
-        return { ...a, lat, lon, color, heatWeight: weight, severity };
-      });
+      }
 
       // --- 2. Map Initialization ---
 
@@ -1428,8 +1014,8 @@
 
       // --- 5. Init ---
       renderStations();
-      renderAccidents();
-      updateStats();
+      loadAccidentData();
+      // renderAccidents and updateStats are called after data load
     </script>
   </body>
 </html>
