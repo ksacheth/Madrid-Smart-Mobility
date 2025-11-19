@@ -1,10 +1,7 @@
 // --- 1. Configuration & Mock Data ---
-proj4.defs(
-  "EPSG:25830",
-  "+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs"
-);
+proj4.defs("EPSG:25830", "+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs");
 
-const ACCIDENT_DATA_FILE = "Madrid%20Transport%20Safety%20Links.nt";
+const ACCIDENT_DATA_FILE = "Madrid Transport Safety Links.nt";
 const RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 const ONT_NS = "http://madrid-transport-safety.org/ontology#";
@@ -126,7 +123,7 @@ function addTriple(graph, subject, predicate, object) {
 function buildRDFGraph(text) {
   const graph = new Map();
   const lines = text.split(/\r?\n/);
-  const tripleRegex = /^<([^>]*)>\s+<([^>]*)>\s+(.*)\s*\.$/;
+  const tripleRegex = /^<([^>]*)>\s+<([^>]*)>\s+(.+)\s*\.$/;
 
   lines.forEach((line) => {
     const trimmed = line.trim();
@@ -136,10 +133,13 @@ function buildRDFGraph(text) {
     const [, subject, predicate, objectRaw] = tripleMatch;
     let object;
 
-    if (objectRaw.startsWith("<") && objectRaw.endsWith(">")) {
-      object = { type: "uri", value: objectRaw.slice(1, -1) };
+    const objectTrimmed = objectRaw.trim();
+    if (objectTrimmed.startsWith("<") && objectTrimmed.endsWith(">")) {
+      object = { type: "uri", value: objectTrimmed.slice(1, -1) };
     } else {
-      const literalMatch = objectRaw.match(/^"((?:[^"\\]|\\.)*)"(?:(\^\^<[^>]+>)|(@[a-zA-Z-]+))?/);
+      const literalMatch = objectRaw.match(
+        /^"((?:[^"\\]|\\.)*)"(?:(\^\^<[^>]+>)|(@[a-zA-Z-]+))?/
+      );
       if (!literalMatch) return;
       const [, rawValue, datatypePart, langPart] = literalMatch;
       const datatype = datatypePart ? datatypePart.slice(3, -1) : null;
@@ -192,11 +192,19 @@ function literalToBoolean(value) {
   return normalized === "true" || normalized === "1";
 }
 
-function buildAccidentFeatures(graph) {
+function buildAccidentFeatures(graph, csvLesionMap = new Map()) {
   const personByAccident = new Map();
   const injuries = new Map();
   const districts = new Map();
   const accidentsList = [];
+
+  // Debug: collect all types in the graph
+  const allTypes = new Set();
+  graph.forEach((node, subject) => {
+    const types = getValues(node, `${RDF_NS}type`).map((entry) => entry.value);
+    types.forEach((t) => allTypes.add(t));
+  });
+  console.log("All types in graph:", Array.from(allTypes));
 
   graph.forEach((node, subject) => {
     const types = getValues(node, `${RDF_NS}type`).map((entry) => entry.value);
@@ -245,6 +253,9 @@ function buildAccidentFeatures(graph) {
 
   graph.forEach((node, subject) => {
     const types = getValues(node, `${RDF_NS}type`).map((entry) => entry.value);
+    if (subject.includes("accident")) {
+      console.log("Accident subject found:", subject);
+    }
     if (!types.includes(`${ONT_NS}Accident`)) return;
 
     const date = getLiteral(node, `${ONT_NS}accidentDate`);
@@ -262,13 +273,21 @@ function buildAccidentFeatures(graph) {
 
     const districtUri = getURI(node, `${ONT_NS}locatedInDistrict`);
     const districtName =
-      districts.get(districtUri)?.name || extractLocalName(districtUri) || "Desconocido";
+      districts.get(districtUri)?.name ||
+      extractLocalName(districtUri) ||
+      "Desconocido";
 
     const personGroup = personByAccident.get(subject) || [];
     const primaryPerson = personGroup[0] || {};
     const injuryInfo = primaryPerson.injury
       ? injuries.get(primaryPerson.injury)
       : undefined;
+
+    // Get case number
+    const caseNumber =
+      getLiteral(node, `${ONT_NS}caseNumber`) || extractLocalName(subject);
+
+    // Use lesion description from injury if available
     const lesion =
       injuryInfo?.label || injuryInfo?.description || "Sin asistencia";
 
@@ -282,16 +301,26 @@ function buildAccidentFeatures(graph) {
 
     let color = "#22c55e";
     let weight = 1;
-    let severity = "Sin asistencia";
+    let severity = "No Injury";
 
-    if (lesion.includes("Ingreso")) {
+    const accidentType = getLiteral(node, `${ONT_NS}accidentType`) || "";
+
+    // Color by severity: 3 categories
+    if (accidentType.toLowerCase().includes("atropello")) {
+      // Pedestrian hit = Serious Injury
       color = "#ef4444";
       weight = 3;
-      severity = "Ingreso 24h";
-    } else if (lesion.includes("Asistencia")) {
-      color = "#eab308";
+      severity = "Serious Injury";
+    } else if (accidentType.toLowerCase().includes("colisión")) {
+      // Collision = Minor Injury
+      color = "#f97316";
       weight = 1.5;
-      severity = "Asistencia";
+      severity = "Minor Injury";
+    } else {
+      // Falls, rear-end, other = No Injury
+      color = "#22c55e";
+      weight = 1;
+      severity = "No Injury";
     }
 
     accidentsList.push({
@@ -328,18 +357,76 @@ function buildAccidentFeatures(graph) {
 
 async function loadAccidentData() {
   try {
+    console.log("Loading accident data from:", ACCIDENT_DATA_FILE);
     const response = await fetch(ACCIDENT_DATA_FILE);
-    if (!response.ok) throw new Error("Failed to load RDF");
+    if (!response.ok)
+      throw new Error(
+        `Failed to load RDF: ${response.status} ${response.statusText}`
+      );
     const text = await response.text();
+    console.log("RDF text loaded, length:", text.length);
     const graph = buildRDFGraph(text);
-    accidents = buildAccidentFeatures(graph);
+    console.log("RDF graph built, subjects:", graph.size);
+
+    // Load CSV for lesion data
+    const csvResponse = await fetch("accidents.csv");
+    const csvText = await csvResponse.text();
+    const csvLesionMap = parseLesionFromCSV(csvText);
+    console.log("CSV lesion map loaded, entries:", csvLesionMap.size);
+
+    accidents = buildAccidentFeatures(graph, csvLesionMap);
+    console.log("Accidents extracted:", accidents.length);
 
     renderAccidents();
     updateStats();
   } catch (err) {
     console.error("Error loading accident data:", err);
-    alert("Error loading accident data. Please ensure you are running this on a local server.");
+    alert(
+      "Error loading accident data. Please ensure you are running this on a local server.\n\nError: " +
+        err.message
+    );
   }
+}
+
+function parseLesionFromCSV(csvText) {
+  const lesionMap = new Map();
+  const lines = csvText.split(/\r?\n/);
+  const headers = lines[0].split(",");
+  const caseNumIndex = headers.indexOf("num_expediente");
+  const lesivityIndex = headers.indexOf("lesividad");
+
+  if (caseNumIndex === -1 || lesivityIndex === -1) return lesionMap;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Simple CSV parsing (handles quoted fields)
+    const values = [];
+    let current = "";
+    let inQuotes = false;
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === "," && !inQuotes) {
+        values.push(current.trim().replace(/^"|"$/g, ""));
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current.trim().replace(/^"|"$/g, ""));
+
+    if (values[caseNumIndex] && values[lesivityIndex]) {
+      lesionMap.set(values[caseNumIndex], values[lesivityIndex]);
+    }
+  }
+  console.log(
+    "Parsed lesion map keys sample:",
+    Array.from(lesionMap.keys()).slice(0, 10)
+  );
+  return lesionMap;
 }
 
 // --- 2. Map Initialization ---
@@ -466,9 +553,7 @@ function renderAccidents() {
     const weatherMatches =
       filterState.weather === "all"
         ? true
-        : a.meteo
-            .toLowerCase()
-            .includes(filterState.weather.toLowerCase());
+        : a.meteo.toLowerCase().includes(filterState.weather.toLowerCase());
     const ageMatches =
       filterState.age === "all" ? true : a.edad === filterState.age;
     return weatherMatches && ageMatches;
@@ -645,7 +730,7 @@ function highlightSafeSpots() {
       color: "#22c55e",
       fill: false,
       weight: 3,
-      }).addTo(layers.routes); // Add ring effect
+    }).addTo(layers.routes); // Add ring effect
   });
 
   document.getElementById("legend").innerText =
@@ -656,20 +741,18 @@ function highlightSafeSpots() {
 // --- 4. Event Listeners ---
 
 // Theme Toggle
-document
-  .getElementById("themeToggle")
-  .addEventListener("click", function () {
-    const isDark = document.body.classList.toggle("dark");
-    this.textContent = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
+document.getElementById("themeToggle").addEventListener("click", function () {
+  const isDark = document.body.classList.toggle("dark");
+  this.textContent = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
 
-    if (isDark) {
-      map.removeLayer(lightTiles);
-      darkTiles.addTo(map);
-    } else {
-      map.removeLayer(darkTiles);
-      lightTiles.addTo(map);
-    }
-  });
+  if (isDark) {
+    map.removeLayer(lightTiles);
+    darkTiles.addTo(map);
+  } else {
+    map.removeLayer(darkTiles);
+    lightTiles.addTo(map);
+  }
+});
 
 // Heatmap Buttons
 document
@@ -702,12 +785,10 @@ document
   .addEventListener("click", () => drawRoute("1001", "2030", false));
 
 // Weather Filter
-document
-  .getElementById("weatherFilter")
-  .addEventListener("change", (e) => {
-    filterState.weather = e.target.value;
-    renderAccidents();
-  });
+document.getElementById("weatherFilter").addEventListener("change", (e) => {
+  filterState.weather = e.target.value;
+  renderAccidents();
+});
 
 document.getElementById("ageFilter").addEventListener("change", (e) => {
   filterState.age = e.target.value;
