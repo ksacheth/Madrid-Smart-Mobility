@@ -4,6 +4,11 @@ proj4.defs(
   "+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs"
 );
 
+const ACCIDENT_DATA_FILE = "Madrid%20Transport%20Safety%20Links.nt";
+const RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+const RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
+const ONT_NS = "http://madrid-transport-safety.org/ontology#";
+
 const stations = [
   {
     id: "1001",
@@ -88,82 +93,249 @@ function formatLocation(localizacion = "", numero = "") {
 
 let accidents = [];
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  
-  return lines.slice(1).map(line => {
-      const values = [];
-      let current = '';
-      let inQuote = false;
-      
-      for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-              inQuote = !inQuote;
-          } else if (char === ',' && !inQuote) {
-              values.push(current.trim().replace(/^"|"$/g, ''));
-              current = '';
-          } else {
-              current += char;
-          }
-      }
-      values.push(current.trim().replace(/^"|"$/g, ''));
-      
-      return headers.reduce((obj, header, index) => {
-          obj[header] = values[index];
-          return obj;
-      }, {});
+function decodeLiteral(value = "") {
+  return value.replace(/\\(.)/g, (_, ch) => {
+    switch (ch) {
+      case "t":
+        return "\t";
+      case "n":
+        return "\n";
+      case "r":
+        return "\r";
+      case '"':
+        return '"';
+      case "\\":
+        return "\\";
+      default:
+        return ch;
+    }
   });
+}
+
+function addTriple(graph, subject, predicate, object) {
+  if (!graph.has(subject)) {
+    graph.set(subject, {});
+  }
+  const node = graph.get(subject);
+  if (!node[predicate]) {
+    node[predicate] = [];
+  }
+  node[predicate].push(object);
+}
+
+function buildRDFGraph(text) {
+  const graph = new Map();
+  const lines = text.split(/\r?\n/);
+  const tripleRegex = /^<([^>]*)>\s+<([^>]*)>\s+(.*)\s*\.$/;
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const tripleMatch = trimmed.match(tripleRegex);
+    if (!tripleMatch) return;
+    const [, subject, predicate, objectRaw] = tripleMatch;
+    let object;
+
+    if (objectRaw.startsWith("<") && objectRaw.endsWith(">")) {
+      object = { type: "uri", value: objectRaw.slice(1, -1) };
+    } else {
+      const literalMatch = objectRaw.match(/^"((?:[^"\\]|\\.)*)"(?:(\^\^<[^>]+>)|(@[a-zA-Z-]+))?/);
+      if (!literalMatch) return;
+      const [, rawValue, datatypePart, langPart] = literalMatch;
+      const datatype = datatypePart ? datatypePart.slice(3, -1) : null;
+      const lang = langPart ? langPart.slice(1) : null;
+      object = {
+        type: "literal",
+        value: decodeLiteral(rawValue),
+        datatype,
+        lang,
+      };
+    }
+    addTriple(graph, subject, predicate, object);
+  });
+
+  return graph;
+}
+
+function getValues(node, predicate) {
+  if (!node || !node[predicate]) return [];
+  return node[predicate];
+}
+
+function getLiteral(node, predicate, fallback = "") {
+  const entry = getValues(node, predicate).find((o) => o.type === "literal");
+  return entry ? entry.value : fallback;
+}
+
+function getURI(node, predicate) {
+  const entry = getValues(node, predicate).find((o) => o.type === "uri");
+  return entry ? entry.value : "";
+}
+
+function extractLocalName(uri = "") {
+  if (!uri) return "";
+  const hashIndex = uri.lastIndexOf("#");
+  if (hashIndex !== -1) return uri.slice(hashIndex + 1);
+  const slashIndex = uri.lastIndexOf("/");
+  if (slashIndex !== -1) return uri.slice(slashIndex + 1);
+  return uri;
+}
+
+function literalToNumber(value) {
+  if (typeof value !== "string" || !value) return NaN;
+  return Number(value);
+}
+
+function literalToBoolean(value) {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
+function buildAccidentFeatures(graph) {
+  const personByAccident = new Map();
+  const injuries = new Map();
+  const districts = new Map();
+  const accidentsList = [];
+
+  graph.forEach((node, subject) => {
+    const types = getValues(node, `${RDF_NS}type`).map((entry) => entry.value);
+    if (types.includes(`${ONT_NS}Injury`)) {
+      injuries.set(subject, {
+        label:
+          getLiteral(node, `${RDFS_NS}label`) ||
+          getLiteral(node, `${ONT_NS}injuryDescription`) ||
+          "Sin dato",
+        description: getLiteral(node, `${ONT_NS}injuryDescription`),
+      });
+      return;
+    }
+
+    if (types.includes(`${ONT_NS}District`)) {
+      districts.set(subject, {
+        name:
+          getLiteral(node, `${ONT_NS}districtName`) ||
+          getLiteral(node, `${RDFS_NS}label`) ||
+          extractLocalName(subject),
+      });
+      return;
+    }
+
+    if (types.includes(`${ONT_NS}Person`)) {
+      const accidentUri = getURI(node, `${ONT_NS}involvedInAccident`);
+      if (!accidentUri) return;
+      const entry = {
+        type: getLiteral(node, `${ONT_NS}personType`) || "Desconocido",
+        age: getLiteral(node, `${ONT_NS}ageRange`) || "Desconocido",
+        gender: getLiteral(node, `${ONT_NS}gender`) || "Desconocido",
+        alcohol: literalToBoolean(
+          getLiteral(node, `${ONT_NS}alcoholPositive`, "false")
+        ),
+        drug: literalToBoolean(
+          getLiteral(node, `${ONT_NS}drugPositive`, "false")
+        ),
+        injury: getURI(node, `${ONT_NS}hasInjury`),
+      };
+      if (!personByAccident.has(accidentUri)) {
+        personByAccident.set(accidentUri, []);
+      }
+      personByAccident.get(accidentUri).push(entry);
+    }
+  });
+
+  graph.forEach((node, subject) => {
+    const types = getValues(node, `${RDF_NS}type`).map((entry) => entry.value);
+    if (!types.includes(`${ONT_NS}Accident`)) return;
+
+    const date = getLiteral(node, `${ONT_NS}accidentDate`);
+    const time = getLiteral(node, `${ONT_NS}accidentTime`);
+    const dateTime =
+      date && time
+        ? `${date}T${time}`
+        : date
+        ? `${date}T00:00:00`
+        : new Date().toISOString();
+
+    const x = literalToNumber(getLiteral(node, `${ONT_NS}x_utm`));
+    const y = literalToNumber(getLiteral(node, `${ONT_NS}y_utm`));
+    if (Number.isNaN(x) || Number.isNaN(y)) return;
+
+    const districtUri = getURI(node, `${ONT_NS}locatedInDistrict`);
+    const districtName =
+      districts.get(districtUri)?.name || extractLocalName(districtUri) || "Desconocido";
+
+    const personGroup = personByAccident.get(subject) || [];
+    const primaryPerson = personGroup[0] || {};
+    const injuryInfo = primaryPerson.injury
+      ? injuries.get(primaryPerson.injury)
+      : undefined;
+    const lesion =
+      injuryInfo?.label || injuryInfo?.description || "Sin asistencia";
+
+    let lat = null;
+    let lon = null;
+    try {
+      [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [x, y]);
+    } catch (err) {
+      return;
+    }
+
+    let color = "#22c55e";
+    let weight = 1;
+    let severity = "Sin asistencia";
+
+    if (lesion.includes("Ingreso")) {
+      color = "#ef4444";
+      weight = 3;
+      severity = "Ingreso 24h";
+    } else if (lesion.includes("Asistencia")) {
+      color = "#eab308";
+      weight = 1.5;
+      severity = "Asistencia";
+    }
+
+    accidentsList.push({
+      exp: getLiteral(node, `${ONT_NS}caseNumber`) || extractLocalName(subject),
+      date: dateTime,
+      loc: formatLocation(
+        getLiteral(node, `${ONT_NS}accidentLocation`) || "Sin dato",
+        getLiteral(node, `${ONT_NS}houseNumber`)
+      ),
+      tipo: getLiteral(node, `${ONT_NS}accidentType`) || "Sin dato",
+      lesion,
+      x,
+      y,
+      lat,
+      lon,
+      meteo: getLiteral(node, `${ONT_NS}weatherCondition`) || "Sin dato",
+      distrito: districtName,
+      vehiculo: normalizeVehicle(
+        getLiteral(node, `${ONT_NS}vehicleType`) || ""
+      ),
+      persona: primaryPerson.type || "Desconocido",
+      edad: primaryPerson.age || "Desconocido",
+      sexo: primaryPerson.gender || "Desconocido",
+      positivaAlcohol: primaryPerson.alcohol ?? false,
+      positivaDroga: primaryPerson.drug ?? false,
+      color,
+      heatWeight: weight,
+      severity,
+    });
+  });
+
+  return accidentsList;
 }
 
 async function loadAccidentData() {
   try {
-    const response = await fetch('accidents.csv');
-    if (!response.ok) throw new Error('Failed to load CSV');
+    const response = await fetch(ACCIDENT_DATA_FILE);
+    if (!response.ok) throw new Error("Failed to load RDF");
     const text = await response.text();
-    const rawData = parseCSV(text);
-
-    const accidentsRaw = rawData.map((row) => ({
-      exp: row.num_expediente,
-      date: `${row.fecha}T${row.hora}`,
-      loc: formatLocation(row.localizacion, row.numero),
-      tipo: row.tipo_accidente,
-      lesion: row.lesividad || "Sin dato",
-      x: Number(row.coordenada_x_utm),
-      y: Number(row.coordenada_y_utm),
-      meteo: row.estado_meteorológico,
-      distrito: row.distrito,
-      vehiculo: normalizeVehicle(row.tipo_vehiculo),
-      persona: row.tipo_persona,
-      edad: row.rango_edad || "Desconocido",
-      sexo: row.sexo || "Desconocido",
-      positivaAlcohol: row.positiva_alcohol === 'true',
-      positivaDroga: row.positiva_droga === 'true',
-    }));
-
-    accidents = accidentsRaw.map((a) => {
-      const [lon, lat] = proj4("EPSG:25830", "EPSG:4326", [a.x, a.y]);
-      let color = "#22c55e"; // green (safe/minor)
-      let weight = 1;
-      let severity = "Sin asistencia";
-
-      if (a.lesion.includes("Ingreso")) {
-        color = "#ef4444";
-        weight = 3;
-        severity = "Ingreso 24h";
-      } else if (a.lesion.includes("Asistencia")) {
-        color = "#eab308";
-        weight = 1.5;
-        severity = "Asistencia";
-      }
-
-      return { ...a, lat, lon, color, heatWeight: weight, severity };
-    });
+    const graph = buildRDFGraph(text);
+    accidents = buildAccidentFeatures(graph);
 
     renderAccidents();
     updateStats();
-
   } catch (err) {
     console.error("Error loading accident data:", err);
     alert("Error loading accident data. Please ensure you are running this on a local server.");
