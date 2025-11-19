@@ -497,47 +497,61 @@ function renderAccidents() {
 
     // Create detailed popup content matching the image
     const shouldShowDetails = a.severity !== "Sin asistencia";
-    if (!shouldShowDetails) {
-      return;
-    }
-
-    const popupContent = `
-    <div class="accident-popup">
-      <h3>Accidente ${a.exp}</h3>
-      <div class="accident-detail">
-        <strong>Fecha:</strong>
-        <span>${formattedDate}</span>
+    const popupContent = shouldShowDetails
+      ? `
+      <div class="accident-popup">
+        <h3>Accidente ${a.exp}</h3>
+        <div class="accident-detail">
+          <strong>Fecha:</strong>
+          <span>${formattedDate}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Ubicación:</strong>
+          <span>${a.loc}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Tipo:</strong>
+          <span>${a.tipo}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Distrito:</strong>
+          <span>${a.distrito}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Vehículo:</strong>
+          <span>${a.vehiculo}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Persona:</strong>
+          <span>${a.persona} (${a.edad})</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Meteo:</strong>
+          <span>${a.meteo}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Lesividad:</strong>
+          <span>${a.lesion}</span>
+        </div>
       </div>
-      <div class="accident-detail">
-        <strong>Ubicación:</strong>
-        <span>${a.loc}</span>
+    `
+      : `
+      <div class="accident-popup">
+        <h3>Accidente ${a.exp}</h3>
+        <div class="accident-detail">
+          <strong>Fecha:</strong>
+          <span>${formattedDate}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Ubicación:</strong>
+          <span>${a.loc}</span>
+        </div>
+        <div class="accident-detail">
+          <strong>Lesividad:</strong>
+          <span>Sin asistencia reportada</span>
+        </div>
       </div>
-      <div class="accident-detail">
-        <strong>Tipo:</strong>
-        <span>${a.tipo}</span>
-      </div>
-      <div class="accident-detail">
-        <strong>Distrito:</strong>
-        <span>${a.distrito}</span>
-      </div>
-      <div class="accident-detail">
-        <strong>Vehículo:</strong>
-        <span>${a.vehiculo}</span>
-      </div>
-      <div class="accident-detail">
-        <strong>Persona:</strong>
-        <span>${a.persona} (${a.edad})</span>
-      </div>
-      <div class="accident-detail">
-        <strong>Meteo:</strong>
-        <span>${a.meteo}</span>
-      </div>
-      <div class="accident-detail">
-        <strong>Lesividad:</strong>
-        <span>${a.lesion}</span>
-      </div>
-    </div>
-  `;
+    `;
 
     marker.bindPopup(popupContent, {
       maxWidth: 350,
