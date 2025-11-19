@@ -304,25 +304,42 @@ function buildAccidentFeatures(graph, csvLesionMap = new Map()) {
     let severity = "No Injury";
 
     const accidentType = getLiteral(node, `${ONT_NS}accidentType`) || "";
+    const lowerType = accidentType.toLowerCase();
 
-    // Color by severity: 3 categories
-    if (accidentType.toLowerCase().includes("atropello")) {
-      // Pedestrian hit = Serious Injury
-      color = "#ef4444";
+    // 7 different colors for 7 accident types - highly distinct
+    if (lowerType.includes("atropello")) {
+      color = "#ef4444"; // Bright Red
       weight = 3;
-      severity = "Serious Injury";
-    } else if (accidentType.toLowerCase().includes("colisión")) {
-      // Collision = Minor Injury
-      color = "#f97316";
+      severity = "Atropello a persona";
+    } else if (lowerType.includes("colisión frontal")) {
+      color = "#8b5cf6"; // Purple
+      weight = 2.5;
+      severity = "Colisión frontal";
+    } else if (lowerType.includes("colisión lateral")) {
+      color = "#06b6d4"; // Cyan
+      weight = 2;
+      severity = "Colisión lateral";
+    } else if (lowerType.includes("colisión fronto-lateral")) {
+      color = "#f97316"; // Orange
+      weight = 1.8;
+      severity = "Colisión fronto-lateral";
+    } else if (lowerType.includes("alcance")) {
+      color = "#ec4899"; // Pink
       weight = 1.5;
-      severity = "Minor Injury";
+      severity = "Alcance";
+    } else if (lowerType.includes("caída")) {
+      color = "#22c55e"; // Green
+      weight = 1.2;
+      severity = "Caída";
+    } else if (lowerType.includes("choque")) {
+      color = "#eab308"; // Yellow
+      weight = 1.5;
+      severity = "Choque contra obstáculo";
     } else {
-      // Falls, rear-end, other = No Injury
-      color = "#22c55e";
+      color = "#6b7280"; // Gray - default
       weight = 1;
-      severity = "No Injury";
+      severity = "Otro";
     }
-
     accidentsList.push({
       exp: getLiteral(node, `${ONT_NS}caseNumber`) || extractLocalName(subject),
       date: dateTime,
